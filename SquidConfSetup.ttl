@@ -1,0 +1,62 @@
+;==============================================
+;; 接続先IPアドレス
+HOST='133.223.79.70'
+;; ポート番号(SSH:22)
+PORT='22'
+;; ユーザ名
+USERNAME='centos'
+;; キーファイル名
+KEY_FILE='toast.pem'
+;==============================================
+;; マクロを配置したフォルダに秘密鍵のファイルを置く場合。
+;; それ以外は適宜KEY_FILE_PATHの値を鍵ファイルのパスに変更する。
+MACRO_DIR=''
+KEY_FILE_PATH=''
+;; マクロを配置したフォルダの絶対パス取得
+getdir MACRO_DIR
+;; 鍵ファイルパス生成
+strconcat KEY_FILE_PATH MACRO_DIR
+strconcat KEY_FILE_PATH '\'
+strconcat KEY_FILE_PATH KEY_FILE
+
+;; 接続コマンド生成
+COMMAND = HOST
+strconcat COMMAND ':'
+strconcat COMMAND PORT
+strconcat COMMAND ' /ssh /2 /auth=publickey /user='
+strconcat COMMAND USERNAME
+strconcat COMMAND ' /keyfile='
+strconcat COMMAND KEY_FILE_PATH
+
+;; 接続
+connect COMMAND
+wait '$'
+
+;; private ipの抽出
+sendln '/sbin/ifconfig | grep "inet 192."| sed -e "s/^.*inet //" -e "s/  .*//" > temp.txt'
+wait '$'
+
+;; /etc/squid/squid.confの権限を一時的に660へ変更する。
+sendln 'sudo chmod 777 /etc/squid/squid.conf'
+wait '$'
+
+;; squid config用に作り替える。
+sendln 'index=1'
+sendln 'for i in `cat temp.txt`'
+sendln 'do'
+sendln '  echo "http_port "$i":3128" >> /etc/squid/squid.conf'
+sendln '  echo "acl ip"$index" myip "$i"/32" >> /etc/squid/squid.conf'
+sendln '  echo "tcp_outgoing_address "$i" ip"$index >> /etc/squid/squid.conf'
+sendln '  echo  >> /etc/squid/squid.conf'
+sendln '  let index++'
+sendln 'done'
+wait '$'
+
+;; /etc/squid/squid.confの権限を元に戻す。
+sendln 'sudo chmod 640 /etc/squid/squid.conf'
+wait '$'
+
+;; squidの再起動。
+sendln 'sudo systemctl restart squid '
+
+end
