@@ -1,16 +1,16 @@
 ;==============================================
 ;; 接続先IPアドレス
-HOST='133.223.79.70'
+HOST='133.223.33.37'
 ;; ポート番号(SSH:22)
 PORT='22'
 ;; ユーザ名
 USERNAME='centos'
 ;; キーファイル名
-KEY_FILE='toast.pem'
+KEY_FILE='toast-whiteout.pem'
 ;==============================================
 ;; マクロを配置したフォルダに秘密鍵のファイルを置く場合。
 ;; それ以外は適宜KEY_FILE_PATHの値を鍵ファイルのパスに変更する。
-MACRO_DIR=''
+MACRO_DIR='C:\Users\kusano\OneDrive'
 KEY_FILE_PATH=''
 ;; マクロを配置したフォルダの絶対パス取得
 getdir MACRO_DIR
@@ -40,6 +40,13 @@ wait '$'
 sendln 'sudo chmod 777 /etc/squid/squid.conf'
 wait '$'
 
+;; /etc/squid/squid.confから古い設定を削除する。
+sendln 'sudo sed -i -e "/http_port 192./d" /etc/squid/squid.conf'
+sendln 'sudo sed -i -e "/myip 192./d" /etc/squid/squid.conf'
+sendln 'sudo sed -i -e "/tcp_outgoing_address 192./d" /etc/squid/squid.conf'
+sendln 'sudo sed -i -e "/^$/{N; /^\n$/D;}" /etc/squid/squid.conf'
+wait '$'
+
 ;; squid config用に作り替える。
 sendln 'index=1'
 sendln 'for i in `cat temp.txt`'
@@ -56,7 +63,14 @@ wait '$'
 sendln 'sudo chmod 640 /etc/squid/squid.conf'
 wait '$'
 
+;; tempファイルの削除。
+sendln 'rm temp.txt'
+wait '$'
+
 ;; squidの再起動。
 sendln 'sudo systemctl restart squid '
+
+;; Tera Term を終了。
+sendln 'exit'
 
 end
